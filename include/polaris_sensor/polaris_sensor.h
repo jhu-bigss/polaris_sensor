@@ -11,7 +11,6 @@ class TransformationDataBX
 {
 public:
     float q0,qx,qy,qz,tx,ty,tz,error;
-
     /**
      * @brief Port status :
      * Bit | Status

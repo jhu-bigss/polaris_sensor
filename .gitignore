@@ -28,3 +28,7 @@
 *.app
 CMakeLists.txt.user
 *~
+
+.idea/
+
+cmake-build-debug/
