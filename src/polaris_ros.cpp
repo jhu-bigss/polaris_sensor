@@ -186,7 +186,8 @@ int main(int argc, char **argv) {
         broadcaster.sendTransform(
                 tf::StampedTransform(
                         transform_world_to_ndi_base_link,
-                        ros::Time::now(), "world",
+                        ros::Time::now(), 
+                        "world",
                         "ndi_base_link"));  // !!! broadcast tf frame of ndi base link
 
         unsigned int i = 0;
