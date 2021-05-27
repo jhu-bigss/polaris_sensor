@@ -247,11 +247,6 @@ int main(int argc, char **argv) {
                             "ndi_base_link",
                             ndi_marker_links[i]));
         }
-//        broadcaster.sendTransform(
-//                tf::StampedTransform(tf::Transform(
-//                        tf::Quaternion(pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w),
-//                        tf::Vector3(pose.position.x, pose.position.y, pose.position.z)), ros::Time::now(),
-//                                     "ndi_base_link", "ndi_marker")); // !!! broadcast the tf frame of marker
 
         ros::spinOnce();
         loop_rate.sleep();
