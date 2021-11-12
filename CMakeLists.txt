@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.2)
 project(polaris_sensor)
 
 find_package(catkin REQUIRED COMPONENTS
@@ -30,17 +30,21 @@ include_directories(
 
 add_library(${PROJECT_NAME}
    src/polaris_sensor.cpp
- )
+)
+
+target_link_libraries(${PROJECT_NAME}
+   ${catkin_LIBRARIES} ${Boost_LIBRARIES}
+)
 
 add_executable(${PROJECT_NAME}_node src/polaris_ros.cpp)
 add_executable(${PROJECT_NAME}_double_node src/polaris_ros_double.cpp)
 
 target_link_libraries(${PROJECT_NAME}_node
    ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${PROJECT_NAME}
- )
+)
 target_link_libraries(${PROJECT_NAME}_double_node
    ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${PROJECT_NAME}
- )
+)
 
 
 install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node ${PROJECT_NAME}_double_node
