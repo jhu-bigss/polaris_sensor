@@ -1,60 +1,77 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.8)
 project(polaris_sensor)
 
-find_package(catkin REQUIRED COMPONENTS
-  geometry_msgs
-  roscpp
-  sensor_msgs
-  tf
-  serial
-  cmake_modules
-)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(serial REQUIRED)
 
-#list( APPEND CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} -g -ftest-coverage -fprofile-arcs")
-## System dependencies are found with CMake's conventions
 find_package(Boost COMPONENTS system filesystem REQUIRED)
 
-catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES polaris_sensor
-  CATKIN_DEPENDS geometry_msgs roscpp serial sensor_msgs tf
-)
-
-include_directories(include)
-include_directories(
-  include
-  ${Boost_INCLUDE_DIR}
-  ${catkin_INCLUDE_DIRS}
-)
+ament_export_include_directories(include)
+ament_export_libraries(${PROJECT_NAME})
 
 add_library(${PROJECT_NAME}
    src/polaris_sensor.cpp
 )
 
+target_include_directories(${PROJECT_NAME} PUBLIC include ${Boost_INCLUDE_DIR})
+
+ament_target_dependencies(${PROJECT_NAME}
+   rclcpp
+   std_msgs
+   geometry_msgs
+   sensor_msgs
+   tf2_ros
+   serial)
+
 target_link_libraries(${PROJECT_NAME}
-   ${catkin_LIBRARIES} ${Boost_LIBRARIES}
+   ${Boost_LIBRARIES}
 )
 
 add_executable(${PROJECT_NAME}_node src/polaris_ros.cpp)
-add_executable(${PROJECT_NAME}_double_node src/polaris_ros_double.cpp)
+# add_executable(${PROJECT_NAME}_double_node src/polaris_ros_double.cpp)
 
 target_link_libraries(${PROJECT_NAME}_node
-   ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${PROJECT_NAME}
-)
-target_link_libraries(${PROJECT_NAME}_double_node
-   ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${PROJECT_NAME}
+   ${Boost_LIBRARIES} ${PROJECT_NAME}
 )
 
-
-install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node ${PROJECT_NAME}_double_node
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+set(THIS_PACKAGE_INCLUDE_DEPENDS
+  ament_cmake
+  rclcpp
+  rclcpp_action
+  tf2_geometry_msgs
+  tf2_ros
+  serial
+  sensor_msgs
+  geometry_msgs
 )
 
-install(DIRECTORY include/${PROJECT_NAME}/
- DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
- FILES_MATCHING PATTERN "*.h"
- PATTERN ".svn" EXCLUDE
-)
+# target_link_libraries(${PROJECT_NAME}_double_node
+   # ${Boost_LIBRARIES} ${PROJECT_NAME}
+# )
+
+# install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node
+#   ARCHIVE DESTINATION lib/${PROJECT_NAME}
+#   LIBRARY DESTINATION lib/${PROJECT_NAME}
+#   RUNTIME DESTINATION bin
+# )
+
+# install(DIRECTORY include/${PROJECT_NAME}/
+#  DESTINATION share
+#  FILES_MATCHING PATTERN "*.h"
+#  PATTERN ".svn" EXCLUDE
+# )
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY include DESTINATION share/${PROJECT_NAME})
+ament_package()
