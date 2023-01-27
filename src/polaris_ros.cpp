@@ -14,6 +14,7 @@
 #include "tf2_ros/transform_broadcaster.h"
 #include "tf2/LinearMath/Transform.h"
 #include "tf2/LinearMath/Quaternion.h"
+#include "rclcpp/parameter.hpp"
 
 bool fexists(const std::string &filename) {
     std::ifstream ifile(filename.c_str());
@@ -78,12 +79,14 @@ int main(int argc, char **argv) {
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(node);
 
     std::string port("/dev/ttyUSB0");
+    node->declare_parameter("port", port);
     if (!node->get_parameter("port", port))
         RCLCPP_WARN(node->get_logger(), "Using default port: %s", port.c_str());
     else
         RCLCPP_INFO(node->get_logger(), "Using port: %s", port.c_str());
 
     std::string camera("polaris");
+    node->declare_parameter("camera", camera);
     if (!node->get_parameter("camera", camera))
         RCLCPP_WARN(node->get_logger(), "Using default camera name: %s", camera.c_str());
     else
@@ -107,6 +110,7 @@ int main(int argc, char **argv) {
 
     std::vector<std::string> roms;
     std::string tmp;
+    node->declare_parameter("roms", std::string("/home/lucy/moveit2_ws/NDI-serial-ros2/src/polaris_sensor/rom/LCSR-optical-tracker-body.rom"));
     if (!node->get_parameter("roms", tmp)) {
         RCLCPP_FATAL(node->get_logger(), "No rom provided, exiting.");
         return -1;
@@ -187,6 +191,9 @@ int main(int argc, char **argv) {
         unsigned int i = 0;
         for (it = targets.begin(); it != targets.end(); ++it) {
             pose.position.x = it->second.tx;
+            RCLCPP_WARN_STREAM(node->get_logger(), "out put for target index " << it->second.error);
+            RCLCPP_WARN_STREAM(node->get_logger(), "out put for target status " << status);
+            RCLCPP_WARN_STREAM(node->get_logger(), "out put for target x " << pose.position.x);
             pose.position.y = it->second.ty;
             pose.position.z = it->second.tz;
             pose.orientation.x = it->second.qx;

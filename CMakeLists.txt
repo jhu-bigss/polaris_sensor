@@ -72,4 +72,5 @@ install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node
 # )
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY include DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY rom DESTINATION share/${PROJECT_NAME})
 ament_package()
