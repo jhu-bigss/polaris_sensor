@@ -11,7 +11,7 @@ using namespace polaris;
 
 #include <limits>
 #include <unistd.h>
-#define BAUD_RATE_INIT 9600
+#define BAUD_RATE_INIT 115200
 #define BAUD_RATE_RUNNING 115200//1228739
 
 void Polaris::removeChar(std::string& str,const char c) {
@@ -212,7 +212,7 @@ bool Polaris::openPort(const std::string& portname,uint32_t baudrate)
 	  //std::cout << "response " <<response <<std::endl;
 	  // Let's reset the sensor
 	  // It was stopped on running mode (bad stop)
-            m_port.setBaudrate(BAUD_RATE_RUNNING);
+        m_port.setBaudrate(BAUD_RATE_RUNNING);
 	    m_port.setFlowcontrol(serial::flowcontrol_hardware);
 	    usleep(200000);
 	    // We put it back to init
@@ -442,7 +442,6 @@ void Polaris::readDataTX(std::string &systemStatus, std::map<int, Transformation
         index += 2;
         //std::cout  << "substr "<< answer_tx.substr(index,7)<<std::endl;
         if(answer_tx.substr(index,7) == "MISSING"){
-            //std::cout << "Target "<<handle<<" MISSING"<<std::endl;
             missing = true;
             index += 7;
         }
