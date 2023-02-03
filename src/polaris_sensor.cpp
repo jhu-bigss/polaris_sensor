@@ -11,7 +11,7 @@ using namespace polaris;
 
 #include <limits>
 #include <unistd.h>
-#define BAUD_RATE_INIT 115200
+#define BAUD_RATE_INIT 9600
 #define BAUD_RATE_RUNNING 115200//1228739
 
 void Polaris::removeChar(std::string& str,const char c) {

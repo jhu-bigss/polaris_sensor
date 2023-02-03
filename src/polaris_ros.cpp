@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
         return -2;
     }
     int n = roms.size();
-    Polaris polaris(port, roms);
+    Polaris *polaris = new Polaris(port, roms);
     vector<std::string> ndi_marker_links(n);
     for (int i = 0; i < n; ++i) {
         ndi_marker_links[i] = "ndi_marker_" + getFileName(roms[i], "") + "_link";
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
 
         rclcpp::Time start = node->now();
 
-        polaris.readDataTX(status, targets);
+        polaris->readDataTX(status, targets);
 
         rclcpp::Time end = node->now();
         rclcpp::Duration duration = (end - start);
