@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
         return -2;
     }
     int n = roms.size();
-    Polaris *polaris = new Polaris(port, roms);
+    auto polaris = std::make_shared<Polaris>(port, roms);
     vector<std::string> ndi_marker_links(n);
     for (int i = 0; i < n; ++i) {
         ndi_marker_links[i] = "ndi_marker_" + getFileName(roms[i], "") + "_link";
@@ -191,9 +191,9 @@ int main(int argc, char **argv) {
         unsigned int i = 0;
         for (it = targets.begin(); it != targets.end(); ++it) {
             pose.position.x = it->second.tx;
-            RCLCPP_WARN_STREAM(node->get_logger(), "out put for target index " << it->second.error);
-            RCLCPP_WARN_STREAM(node->get_logger(), "out put for target status " << status);
-            RCLCPP_WARN_STREAM(node->get_logger(), "out put for target x " << pose.position.x);
+            RCLCPP_WARN_STREAM(node->get_logger(), "output for target index " << it->second.error);
+            RCLCPP_WARN_STREAM(node->get_logger(), "output for target status " << status);
+            RCLCPP_WARN_STREAM(node->get_logger(), "output for target x " << pose.position.x);
             pose.position.y = it->second.ty;
             pose.position.z = it->second.tz;
             pose.orientation.x = it->second.qx;
@@ -255,6 +255,8 @@ int main(int argc, char **argv) {
         loop_rate.sleep();
         ++count;
     }
+
+    rclcpp::shutdown();
 
     return 0;
 }
