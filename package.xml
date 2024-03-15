@@ -15,8 +15,6 @@
   <depend>serial</depend>
   <depend>tf2_ros</depend>
   
-  <build_export_depend>serial</build_export_depend>
-
   <export>
     <build_type>ament_cmake</build_type>
   </export>
