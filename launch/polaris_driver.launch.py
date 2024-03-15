@@ -12,7 +12,7 @@ def generate_launch_description():
         package = 'polaris_sensor',
         executable = 'polaris_sensor_node',
         parameters = [
-            {"roms": os.path.join(polaris_package_path, 'rom/LCSR-optical-tracker-body.rom')},
+            {"roms": os.path.join(polaris_package_path, 'rom/Pointer_V1.rom')},
             {"port": "/dev/ttyUSB0"}
         ],
         

@@ -1,11 +1,11 @@
 Polaris Hybrid Position Sensor driver
 ==============
-This package contains a ROS-independant library to get information from the Polaris (based on https://github.com/wjwwood/serial) and a simple ROS wrapper to send a geometry_msgs::PoseArray (visualizable on Rviz2).
+This package contains a ROS-independant library to get information from the Polaris (based on https://github.com/RoverRobotics-forks/serial-ros2) and a simple ROS wrapper to send a geometry_msgs::PoseArray (visualizable on Rviz2).
 
 ### Usage
 Two parameters are needed, the .rom files and the port to which the sensor is connected :
 ```bash
-ros2 run polaris_sensor polaris_sensor_node --ros-args -p roms:=/home/T0.rom port:=/dev/ttyUSB0
+ros2 run polaris_sensor polaris_sensor_node --ros-args -p roms:=/your_rom_file_location/your_marker_tool.rom port:=/dev/ttyUSB0
 ```
 
 If you have **multiple** rom files :
@@ -15,9 +15,9 @@ ros2 run polaris_sensor polaris_sensor_node --ros-args -p roms:="/dir_to/marker_
 
 If you want to get the two rom relative transformation:
 ```bash
-ros2 run polaris_sensor polaris_sensor_double_node --ros-args -p roms:="$(rospack find polaris_sensor)/rom/8700339.rom,"$(rospack find polaris_sensor)/rom/8700449.rom _port:=/dev/ttyUSB0 
+ros2 run polaris_sensor polaris_sensor_double_node --ros-args -p roms:="$(rospack find polaris_sensor)/rom/marker_1.rom,"$(rospack find polaris_sensor)/rom/marker_2.rom _port:=/dev/ttyUSB0 
 ```
-The first the rom is the target corrdinate and the second rom is the base corrdinate, then you can subscribe the topic /polaris_sensor/targets_in_base to get the transformation
+The first the rom is the target corrdinate and the second rom is the base corrdinate, then you can subscribe the topic `/polaris_sensor/targets_in_base` to get the transformation
 
 For convenience you can also use the launch file (default single rom tracking, you can set your rom file in this launch)
 ```bash
@@ -32,7 +32,7 @@ lsusb
 
 you can get the information like that:
 ```bash
-Bus 003 Device 006: ID 1a86:7523 QinMing Electronics HL-340 USB Serial adapter
+Bus 001 Device 007: ID 067b:2303 Prolific Technology, Inc. PL2303 Serial Port / Mobile Action MA-8910P
 ```
 
 Then you need to add the rules file to /etc/udev/rules.d which file name you need to named "70-ttyusb.rules"

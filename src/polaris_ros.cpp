@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
 
     std::vector<std::string> roms;
     std::string tmp;
-    node->declare_parameter("roms", std::string("/home/lucy/moveit2_ws/NDI-serial-ros2/src/polaris_sensor/rom/LCSR-optical-tracker-body.rom"));
+    node->declare_parameter("roms", std::string("/home/josh/BIGSS/ws_ndi_polaris/src/polaris_sensor/rom/LCSR-optical-tracker-body.rom"));
     if (!node->get_parameter("roms", tmp)) {
         RCLCPP_FATAL(node->get_logger(), "No rom provided, exiting.");
         return -1;
