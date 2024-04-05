@@ -1,203 +1,156 @@
-// ROS
-#include <ros/ros.h>
-#include <geometry_msgs/PoseArray.h>
-#include <geometry_msgs/Pose.h> // !!!
-#include <sensor_msgs/PointCloud.h>
-#include <serial/serial.h>
-#include <polaris_sensor/polaris_sensor.h>
+#include <rclcpp/rclcpp.hpp>
+#include <fstream>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
-#include <algorithm>
-#include <fstream>
-#include <std_msgs/Float32.h>
+#include <geometry_msgs/msg/pose_array.hpp>
+#include <sensor_msgs/msg/point_cloud.hpp>
+#include <std_msgs/msg/float32.hpp>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2/LinearMath/Transform.h>
+#include <tf2/LinearMath/Quaternion.h>
 #include <ctime>
 #include <iostream>
+#include <polaris_sensor/polaris_sensor.h>
 
-#include <tf/transform_broadcaster.h>  // !!! add the tf broadcaster.h
-#include <tf/transform_listener.h> // !!! add the tf listener.h
 
-bool fexists(const std::string& filename) {
-  std::ifstream ifile(filename.c_str());
-  return (bool)ifile;
+bool fexists(const std::string &filename) {
+    std::ifstream ifile(filename.c_str());
+    return (bool) ifile;
 }
 
-using namespace boost;
 using namespace std;
 using namespace polaris;
 
+string gen_random(const int len) {
+    string tmp_s;
+    static const char alphanum[] = "0123456789";
 
-bool nexists(const std::string& r)
-{
-    if(!fexists(r))
-    {
-        ROS_WARN("Rom %s doest not exists, skipping.",r.c_str());
-        return true;
-    }
-    return false;
+    srand((unsigned) time(NULL) * getpid());
+
+    tmp_s.reserve(len);
+
+    for (int i = 0; i < len; ++i)
+        tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
+    return tmp_s;
 }
 
-int main(int argc, char **argv)
-{
-    // Usage : rosrun polaris_sensor polaris_sensor _roms:="/home/T0.rom,/home/T1.rom" _port:=/dev/ttyUSB0
-    ros::Time::init();
-    ros::init(argc, argv, "polaris_sensor");
-    ros::NodeHandle nh("~");
+string getFileName(const string &s, const string &default_val) {
+    char sep = '/';
+    char dot = '.';
 
-    ros::Publisher pose_array_pub = nh.advertise<geometry_msgs::PoseArray>("targets", 1);
-    ros::Publisher cloud_pub = nh.advertise<sensor_msgs::PointCloud>("targets_cloud", 1);
-    ros::Publisher dt_pub = nh.advertise<std_msgs::Float32>("dt", 1);
-    ros::Publisher pose_pub = nh.advertise<geometry_msgs::Pose>("targets_in_base", 1);
+    size_t i = s.rfind(sep, s.length());
+    if (i != string::npos) {
+        string sub_s = s.substr(i + 1, s.length() - i);
+        size_t sub_i = sub_s.find(dot, 0);
+        if (sub_i != 0) {
+            return (sub_s.substr(0, sub_i));
+        }
+    }
+    return (default_val + gen_random(8));
+}
 
-    tf::TransformBroadcaster broadcaster;  // !!! add the handle of broadcaster
-    tf::TransformListener listener; // !!! add the handle of listener
+int main(int argc, char **argv) {
+    rclcpp::init(argc, argv);
+    auto node = rclcpp::Node::make_shared("polaris_sensor");
 
-    std::string port("/dev/ttyUSB0");
-    if(!nh.getParam("port",port))
-        ROS_WARN("Using default port: %s",port.c_str());
-    else
-        ROS_INFO("Using port: %s",port.c_str());
+    auto dt_pub = node->create_publisher<std_msgs::msg::Float32>("dt", 1);
 
-    std::string camera("polaris");
-    if(!nh.getParam("camera",camera))
-        ROS_WARN("Using default camera name: %s",camera.c_str());
-    else
-        ROS_INFO("Using camera name: %s",camera.c_str());
+    std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(node);
 
     std::vector<std::string> roms;
     std::string tmp;
-    if(!nh.getParam ( "roms", tmp)){
-        ROS_FATAL("No rom provided, exiting.");
+    node->declare_parameter("roms", std::string("/home/josh/BIGSS/ws_ndi_polaris/src/polaris_sensor/rom/LCSR-optical-tracker-body.rom"));
+    if (!node->get_parameter("roms", tmp)) {
+        RCLCPP_FATAL(node->get_logger(), "No rom provided, exiting.");
         return -1;
     }
     boost::erase_all(tmp, " ");
-    boost::split ( roms, tmp, boost::is_any_of(","));
+    boost::split(roms, tmp, boost::is_any_of(","));
 
-    roms.erase(std::remove_if(roms.begin(),roms.end(),nexists),
-                   roms.end());
-   if(roms.size() == 0)
-   {
-       ROS_FATAL("No roms could be loaded, exiting.");
-       return -2;
-   }
-    int n = roms.size();
-    Polaris polaris(port,roms);
-
-    geometry_msgs::PoseArray targets_pose;
-    sensor_msgs::PointCloud targets_cloud;
-    geometry_msgs::Pose target_base_pose; // !!! add the relative pose
-
-    targets_cloud.header.frame_id = "/"+camera+"_link";
-    targets_pose.header.frame_id = "/"+camera+"_link";
-
-    ros::Rate loop_rate(100);
-    int count = 0;
-    ROS_INFO("Starting Polaris tracker loop");
-    for(int i=0;i<n;++i){
-      targets_pose.poses.push_back(geometry_msgs::Pose());
-      targets_cloud.points.push_back(geometry_msgs::Point32());
+    if (roms.empty()) {
+        RCLCPP_FATAL(node->get_logger(), "No roms could be loaded, exiting.");
+        return -2;
     }
 
-    geometry_msgs::Pose pose;
-    geometry_msgs::Point32 pt;
+    std::string port("/dev/ttyUSB0"); // Moved the port declaration here
+    auto polaris = std::make_shared<Polaris>(port, roms);
 
-    std_msgs::Float32 dt;
-    std::map<int,TransformationDataTX> targets;
-    float r_qx,r_qy,r_qz,r_qw,r_x,r_y,r_z; // !!! define the neccessary variable
-    while (ros::ok())
-    {
+    geometry_msgs::msg::Pose pose;
+
+    std_msgs::msg::Float32 dt;
+    std::map<int, TransformationDataTX> targets;
+
+    rclcpp::Rate loop_rate(100);
+    int count = 0;
+    RCLCPP_INFO(node->get_logger(), "Starting Polaris tracker loop");
+
+    while (rclcpp::ok()) {
         /* Start TX */
         std::string status;
 
+        rclcpp::Time start = node->now();
 
-	ros::Time start = ros::Time::now();
+        polaris->readDataTX(status, targets);
 
-	polaris.readDataTX(status,targets);
+        rclcpp::Time end = node->now();
+        rclcpp::Duration duration = (end - start);
 
-	ros::Time end = ros::Time::now();
-	ros::Duration duration = (end - start);
+        dt.data = duration.nanoseconds() / 1000000.;
 
-	dt.data = duration.nsec/1000000.;
+        dt_pub->publish(dt);
 
-        dt_pub.publish(dt);
+        // Check if ndi_marker_1 and ndi_marker_2 are present
+        if (targets.find(1) != targets.end() && targets.find(2) != targets.end()) {
+            // Calculate relative transform between ndi_marker_1 and ndi_marker_2
+            auto first_marker = targets.find(1)->second;
+            auto second_marker = targets.find(2)->second;
 
-        std::map<int,TransformationDataTX>::iterator it = targets.begin();
+            geometry_msgs::msg::TransformStamped relative_tf;
+            relative_tf.header.stamp = node->now();
+            relative_tf.header.frame_id = "ndi_marker_1_link";
+            relative_tf.child_frame_id = "ndi_marker_2_link";
 
-        /* Start BX
-        uint16_t status;
-        std::map<int,TransformationDataBX> targets;
-        polaris.readDataBX(status,targets);
+            // Calculate the relative translation
+            relative_tf.transform.translation.x = second_marker.tx - first_marker.tx;
+            relative_tf.transform.translation.y = second_marker.ty - first_marker.ty;
+            relative_tf.transform.translation.z = second_marker.tz - first_marker.tz;
 
-        std::map<int,TransformationDataBX>::iterator it = targets.begin();*/
+            // Calculate the relative rotation using quaternions
+            tf2::Quaternion first_quaternion(
+                first_marker.qx,
+                first_marker.qy,
+                first_marker.qz,
+                first_marker.q0
+            );
 
-        broadcaster.sendTransform(
-          tf::StampedTransform(tf::Transform(tf::Quaternion(0, 0, 0, 1), tf::Vector3(0.0, 0.0, 0.0)), ros::Time::now(), "world", "ndi_base_link"));  // !!! broadcast tf frame of ndi base link
-	      unsigned int i=0;
-        for(it = targets.begin();it!=targets.end();++it)
-        {
-            pose.position.x = it->second.tx;
-            pose.position.y = it->second.ty;
-            pose.position.z = it->second.tz;
-            pose.orientation.x = it->second.qx;
-            pose.orientation.y = it->second.qy;
-            pose.orientation.z = it->second.qz;
-            pose.orientation.w = it->second.q0;
-            targets_pose.poses[i] = pose;
+            tf2::Quaternion second_quaternion(
+                second_marker.qx,
+                second_marker.qy,
+                second_marker.qz,
+                second_marker.q0
+            );
 
-            pt.x = it->second.tx;
-            pt.y = it->second.ty;
-            pt.z = it->second.tz;
-            targets_cloud.points[i] = pt;
-	    i++;
+            // Compute the relative rotation by multiplying the inverse of the first quaternion with the second quaternion
+            tf2::Quaternion relative_quaternion = first_quaternion.inverse() * second_quaternion;
+
+            // Convert the relative quaternion to a ROS message format
+            relative_tf.transform.rotation.x = relative_quaternion.getX();
+            relative_tf.transform.rotation.y = relative_quaternion.getY();
+            relative_tf.transform.rotation.z = relative_quaternion.getZ();
+            relative_tf.transform.rotation.w = relative_quaternion.getW();
+
+            // Publish the relative transform
+            tf_broadcaster_->sendTransform(relative_tf);
+        } else {
+            RCLCPP_WARN_STREAM(node->get_logger(), "ndi_marker_1 or ndi_marker_2 is missing");
         }
-	if (isnan(targets_pose.poses[0].position.x)){
-	  ROS_INFO("RoM0 is not in the range");}
-	else if (isnan(targets_pose.poses[1].position.x)){
-	  ROS_INFO("RoM1 is not in the range");}
-        targets_cloud.header.stamp = ros::Time::now();
-        targets_pose.header.stamp = ros::Time::now();
-        cloud_pub.publish(targets_cloud);
-        pose_array_pub.publish(targets_pose);
-        broadcaster.sendTransform(
-          tf::StampedTransform(tf::Transform(tf::Quaternion(targets_pose.poses[0].orientation.x, targets_pose.poses[0].orientation.y, targets_pose.poses[0].orientation.z, targets_pose.poses[0].orientation.w), tf::Vector3(targets_pose.poses[0].position.x, targets_pose.poses[0].position.y, targets_pose.poses[0].position.z)), ros::Time::now(), "ndi_base_link", "ndi_marker_base")); // !!! broadcast the tf frame of marker_base
 
-        broadcaster.sendTransform(
-          tf::StampedTransform(tf::Transform(tf::Quaternion(targets_pose.poses[1].orientation.x, targets_pose.poses[1].orientation.y, targets_pose.poses[1].orientation.z, targets_pose.poses[1].orientation.w), tf::Vector3(targets_pose.poses[1].position.x, targets_pose.poses[1].position.y, targets_pose.poses[1].position.z)), ros::Time::now(), "ndi_base_link", "ndi_marker_target")); // !!! broadcast the tf frame of marker_target
-
-	//!!! publish the relative transformance between the base and target
-	tf::StampedTransform transform; // !!!
-        //!!!get the relation between ndi_marker_base and ndi_marker_target
-        try{
-          listener.waitForTransform("ndi_marker_target", "ndi_marker_base", ros::Time(0), ros::Duration(3.0));
-          listener.lookupTransform("ndi_marker_target", "ndi_marker_base", ros::Time(0), transform);
-           }
-        catch (tf::TransformException &ex) {
-          ROS_ERROR("%s",ex.what());
-          ros::Duration(1.0).sleep();
-        }
-	//!!! gettransform
-        r_x=transform.getOrigin().x();
-        r_y=transform.getOrigin().y();
-        r_z=transform.getOrigin().z();
-        //!!! getRotation
-        r_qx=transform.getRotation()[0];
-        r_qy=transform.getRotation()[1];
-        r_qz=transform.getRotation()[2];
-        r_qw=transform.getRotation()[3];
-	// !!! add to the topic message
-	target_base_pose.position.x = r_x;
-	target_base_pose.position.y = r_y;
-	target_base_pose.position.z = r_z;
-	target_base_pose.orientation.x = r_qx;
-	target_base_pose.orientation.y = r_qy;
-	target_base_pose.orientation.z = r_qz;
-	target_base_pose.orientation.w = r_qw;
-	// !!! publish the topic "target_in_base"
-	pose_pub.publish(target_base_pose);
-
-        ros::spinOnce();
+        rclcpp::spin_some(node);
         loop_rate.sleep();
         ++count;
     }
+
+    rclcpp::shutdown();
 
     return 0;
 }

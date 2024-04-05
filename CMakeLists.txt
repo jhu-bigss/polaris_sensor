@@ -40,9 +40,12 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 add_executable(${PROJECT_NAME}_node src/polaris_ros.cpp)
-# add_executable(${PROJECT_NAME}_double_node src/polaris_ros_double.cpp)
-
 target_link_libraries(${PROJECT_NAME}_node
+   ${Boost_LIBRARIES} ${PROJECT_NAME}
+)
+
+add_executable(${PROJECT_NAME}_double_node src/polaris_ros_double.cpp)
+target_link_libraries(${PROJECT_NAME}_double_node
    ${Boost_LIBRARIES} ${PROJECT_NAME}
 )
 
@@ -61,8 +64,12 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
    # ${Boost_LIBRARIES} ${PROJECT_NAME}
 # )
 
-install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node
-  DESTINATION lib/${PROJECT_NAME}
+install(TARGETS
+   ${PROJECT_NAME}
+   ${PROJECT_NAME}_node
+   ${PROJECT_NAME}_double_node
+   DESTINATION
+   lib/${PROJECT_NAME}
 )
 
 # install(DIRECTORY include/${PROJECT_NAME}/
